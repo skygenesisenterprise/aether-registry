@@ -1,4 +1,4 @@
-module github.com/skygenesisenterprise/aether-bank
+module github.com/skygenesisenterprise/aether-registry
 
 go 1.25.5
 
