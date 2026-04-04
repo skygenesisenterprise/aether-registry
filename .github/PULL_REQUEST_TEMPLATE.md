@@ -1,6 +1,6 @@
 # Pull Request
 
-Thank you for contributing to **Registry Service**!  
+Thank you for contributing to **Aether Account**!  
 Please fill out the following information to help us review your changes effectively.
 
 ---

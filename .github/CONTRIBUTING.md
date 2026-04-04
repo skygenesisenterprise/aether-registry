@@ -1,15 +1,15 @@
 ### 📄 `CONTRIBUTING.md`
 
-# Contributing to Registry Service
+# Contributing to Aether Account
 
-Thank you for your interest in contributing to **Registry Service**!  
+Thank you for your interest in contributing to **Aether Account**!  
 We welcome community contributions and feedback, while the project is also maintained and developed by [Sky Genesis Enterprise](https://skygenesisenterprise.com).
 
 ---
 
 ## 📦 About the Project
 
-**API Service** is the official API Service of Sky Genesis Enterprise, licensed under **MIT**, with both:
+**Aether Account** is an open-source email client licensed under **MIT Licence**, with both:
 
 - A **free and self-hostable version** for the open-source community
 - A **commercial edition** with additional features and premium support maintained by Sky Genesis Enterprise
@@ -20,7 +20,7 @@ We value collaboration and are happy to accept pull requests, bug reports, and f
 
 ## 🧭 Code of Conduct
 
-We follow a [Code of Conduct](https://github.com/skygenesisenterprise/registry-service/CODE_OF_CONDUCT.md) to ensure a safe, respectful, and inclusive environment.  
+We follow a [Code of Conduct](https://github.com/skygenesisenterprise/aether-account/CODE_OF_CONDUCT.md) to ensure a safe, respectful, and inclusive environment.  
 Please make sure you read and respect it before contributing.
 
 ---
@@ -32,8 +32,8 @@ Please make sure you read and respect it before contributing.
 Use the GitHub UI to create a fork, then clone it locally:
 
 ```bash
-git clone https://github.com/skygenesisenterprise/registry-service.git
-cd registry-service
+git clone https://github.com/skygenesisenterprise/aether-account.git
+cd aether-account
 ```
 
 ### 2. Set Up Locally
@@ -41,8 +41,8 @@ cd registry-service
 Install dependencies and run the development server (example for TypeScript/Node):
 
 ```bash
-cargo install
-cargo run
+pnpm install
+pnpm run dev
 ```
 
 > See [README.md](./README.md) for platform-specific setup instructions.
@@ -77,7 +77,7 @@ Please write tests if applicable, and update documentation when necessary.
 Ensure your code doesn’t break existing functionality:
 
 ```bash
-cargo run test
+pnpm test
 ```
 
 ---
@@ -108,7 +108,7 @@ Please note that **final decisions regarding project direction, architecture, an
 
 ## 📩 Questions or Suggestions?
 
-Open a [GitHub Discussion](https://github.com/skygenesisenterprise/registry-service/discussions)
+Open a [GitHub Discussion](https://github.com/skygenesisenterprise/aether-account/discussions)
 Or reach out to us at [contact@skygenesisenterprise.com](mailto:contact@skygenesisenterprise.com)
 
-Thank you for helping improve to the Registry Service! 💌
+Thank you for helping improve Aether Account 💌

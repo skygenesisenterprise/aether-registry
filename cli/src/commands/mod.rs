@@ -1,9 +1,0 @@
-pub mod search;
-pub mod install;
-pub mod remove;
-pub mod list;
-pub mod info;
-pub mod update;
-pub mod upgrade;
-pub mod auth;
-pub mod admin;

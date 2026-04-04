@@ -1,233 +1,91 @@
-# Sky Genesis Enterprise - Main Makefile
-# ======================================
+.PHONY: help build build-app build-server build-dev build-cloud run-app run-server run-dev run-prod stop clean prune rmi-dev dev-up dev-down dev-logs
 
-# Variables
-PNPM ?= pnpm
-DOCKER_COMPOSE ?= docker-compose
-DOCKER_COMPOSE_FILE ?= infrastructure/docker/docker-compose.yml
+APP_NAME := aetherbank
 
-# Default target
-.PHONY: help
-help: ## Show this help message
-	@echo "Sky Genesis Enterprise - Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-25s %s\n", $$1, $$2}'
+help:
+	@echo "Available targets:"
+	@echo "  build         - Build production image (full app)"
+	@echo "  build-app     - Build frontend image (app/)"
+	@echo "  build-server  - Build server image (server/)"
+	@echo "  build-dev     - Build development image"
+	@echo "  build-cloud   - Build cloud image"
+	@echo "  run-app       - Run frontend container"
+	@echo "  run-server    - Run server container"
+	@echo "  run-dev       - Run development container (docker-compose)"
+	@echo "  run-prod      - Run production container"
+	@echo "  stop          - Stop all containers"
+	@echo "  clean         - Remove build artifacts"
+	@echo "  prune         - Clean up Docker system"
+	@echo "  rmi-dev       - Remove dev image and container"
+	@echo "  dev-up        - Start dev environment (docker-compose)"
+	@echo "  dev-down      - Stop dev environment"
+	@echo "  dev-logs      - View dev environment logs"
+	@echo "  cloud-up      - Start cloud environment (docker-compose)"
+	@echo "  cloud-down    - Stop cloud environment"
+	@echo "  cloud-logs    - View cloud environment logs"
 
-# Development commands
-.PHONY: dev
-dev: ## Start both backend and frontend in development mode
-	$(PNPM) run dev
+build:
+	docker build -t $(APP_NAME):latest .
 
-.PHONY: dev-backend
-dev-backend: ## Start only the backend API
-	$(PNPM) run dev:backend
+build-app:
+	docker build -f Dockerfile -t $(APP_NAME)-app:latest --target frontend-builder app/
 
-.PHONY: dev-frontend
-dev-frontend: ## Start only the frontend
-	$(PNPM) run dev:frontend
+build-server:
+	docker build -f Dockerfile -t $(APP_NAME)-server:latest --target backend-builder .
 
-.PHONY: build
-build: ## Build all components
-	$(PNPM) run build
+build-dev:
+	docker build --no-cache -f Dockerfile.dev -t $(APP_NAME)-dev:latest .
 
-.PHONY: start
-start: ## Start production servers
-	$(PNPM) run start
+build-cloud:
+	docker build -f Dockerfile.cloud -t $(APP_NAME):latest .
 
-# API specific commands (delegate to api/Makefile)
-.PHONY: api-%
-api-%: ## Run API-specific commands (e.g., make api-build, make api-test)
-	$(MAKE) -C api $*
+run-app:
+	docker run --name $(APP_NAME)-app -p 3000:3000 $(APP_NAME)-app:latest
 
-# Testing commands
-.PHONY: test
-test: ## Run all tests
-	$(PNPM) run test
+run-server:
+	docker run --name $(APP_NAME)-server -p 8080:8080 $(APP_NAME)-server:latest
 
-.PHONY: test-watch
-test-watch: ## Run tests in watch mode
-	$(PNPM) run test:watch
+run-dev:
+	docker run --name $(APP_NAME)-dev -p 3000:3000 $(APP_NAME)-dev:latest
 
-.PHONY: lint
-lint: ## Run linting
-	$(PNPM) run lint
+run-prod:
+	docker run --name $(APP_NAME)-prod -p 3000:3000 $(APP_NAME):latest
 
-# Docker commands
-.PHONY: docker-build
-docker-build: ## Build all Docker images
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) build
+stop:
+	docker stop $(APP_NAME)-app $(APP_NAME)-server $(APP_NAME)-dev $(APP_NAME)-prod 2>/dev/null || true
+	docker rm $(APP_NAME)-app $(APP_NAME)-server $(APP_NAME)-dev $(APP_NAME)-prod 2>/dev/null || true
 
-.PHONY: docker-build-release
-docker-build-release: ## Build Docker images for release with proper tagging
-	@echo "Building release Docker images..."
-	@if [ -n "$$TAG" ]; then \
-		VERSION=$$(./infrastructure/scripts/extract-tag-version.sh $$TAG) && \
-		echo "Building with tag: $$TAG (version: $$VERSION)"; \
-	else \
-		VERSION=$$(./infrastructure/scripts/extract-version.sh) && \
-		echo "Building with auto-detected version: $$VERSION"; \
-	fi && \
-	docker build -f infrastructure/docker/Dockerfile.api -t skygenesisenterprise/api-service:$$VERSION -t skygenesisenterprise/api-service:latest . && \
-	docker build -f infrastructure/docker/Dockerfile.frontend -t skygenesisenterprise/api-client:$$VERSION -t skygenesisenterprise/api-client:latest . && \
-	docker build -f infrastructure/docker/Dockerfile.cli -t skygenesisenterprise/api-cli:$$VERSION -t skygenesisenterprise/api-cli:latest . && \
-	docker build -f infrastructure/docker/Dockerfile.all-in-one -t skygenesisenterprise/api:$$VERSION -t skygenesisenterprise/api:latest .
+clean:
+	rm -rf app/.next
+	rm -rf server/aether-server
 
-.PHONY: docker-build-tag
-docker-build-tag: ## Build Docker images for a specific tag (usage: make docker-build-tag TAG=v1.2.6-api)
-	@if [ -z "$$TAG" ]; then \
-		echo "Error: TAG variable is required. Usage: make docker-build-tag TAG=v1.2.6-api"; \
-		exit 1; \
-	fi && \
-	$(MAKE) docker-build-release TAG=$$TAG
+prune:
+	docker system prune -f
 
-.PHONY: docker-push-release
-docker-push-release: ## Push release Docker images to registry
-	@echo "Pushing release Docker images..."
-	@if [ -n "$$TAG" ]; then \
-		VERSION=$$(./infrastructure/scripts/extract-tag-version.sh $$TAG) && \
-		echo "Pushing with tag: $$TAG (version: $$VERSION)"; \
-	else \
-		VERSION=$$(./infrastructure/scripts/extract-version.sh) && \
-		echo "Pushing with auto-detected version: $$VERSION"; \
-	fi && \
-	docker push skygenesisenterprise/api-service:$$VERSION && \
-	docker push skygenesisenterprise/api-service:latest && \
-	docker push skygenesisenterprise/api-client:$$VERSION && \
-	docker push skygenesisenterprise/api-client:latest && \
-	docker push skygenesisenterprise/api-cli:$$VERSION && \
-	docker push skygenesisenterprise/api-cli:latest && \
-	docker push skygenesisenterprise/api:$$VERSION && \
-	docker push skygenesisenterprise/api:latest
+rmi-dev:
+	docker stop $(APP_NAME) 2>/dev/null || true
+	docker rm $(APP_NAME) 2>/dev/null || true
+	docker rmi $(APP_NAME)-dev:latest 2>/dev/null || true
 
-.PHONY: docker-push-tag
-docker-push-tag: ## Push Docker images for a specific tag (usage: make docker-push-tag TAG=v1.2.6-api)
-	@if [ -z "$$TAG" ]; then \
-		echo "Error: TAG variable is required. Usage: make docker-push-tag TAG=v1.2.6-api"; \
-		exit 1; \
-	fi && \
-	$(MAKE) docker-push-release TAG=$$TAG
+dev-up:
+	docker compose -f docker-compose.dev.yml up -d
 
-.PHONY: docker-up
-docker-up: ## Start all services with Docker Compose
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up -d
+dev-down:
+	docker compose -f docker-compose.dev.yml down
 
-.PHONY: docker-down
-docker-down: ## Stop all services with Docker Compose
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) down
+dev-logs:
+	docker compose -f docker-compose.dev.yml logs -f
 
-.PHONY: docker-dev
-docker-dev: ## Run development environment with Docker
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) up
+dev-rebuild:
+	docker compose -f docker-compose.dev.yml down
+	docker build --no-cache -f Dockerfile.dev -t $(APP_NAME):latest .
+	docker compose -f docker-compose.dev.yml up -d
 
-.PHONY: docker-logs
-docker-logs: ## Show logs from all Docker containers
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) logs -f
+cloud-up:
+	docker compose -f docker-compose.cloud.yml up -d
 
-.PHONY: docker-clean
-docker-clean: ## Clean Docker containers and volumes
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_FILE) down -v --remove-orphans
+cloud-down:
+	docker compose -f docker-compose.cloud.yml down
 
-# Database commands
-.PHONY: db-setup
-db-setup: ## Setup database (requires Docker services running)
-	@echo "Database setup requires running Docker services"
-	@echo "Run: make docker-up"
-
-.PHONY: db-migrate
-db-migrate: ## Run database migrations
-	@echo "Database migrations handled by Docker containers"
-
-# Installation and setup
-.PHONY: install
-install: ## Install all dependencies
-	$(PNPM) install
-
-.PHONY: setup
-setup: ## Setup development environment
-	@echo "Setting up development environment..."
-	$(PNPM) install
-	@echo "Development environment setup complete!"
-	@echo ""
-	@echo "Next steps:"
-	@echo "1. Copy .env.example to .env and configure your environment variables"
-	@echo "2. Run 'make docker-up' to start supporting services (DB, Vault, etc.)"
-	@echo "3. Run 'make dev' to start development servers"
-
-# Cleanup commands
-.PHONY: clean
-clean: ## Clean all build artifacts
-	$(PNPM) run clean 2>/dev/null || true
-	$(MAKE) -C api clean 2>/dev/null || true
-	find . -name "*.log" -delete 2>/dev/null || true
-	find . -name ".DS_Store" -delete 2>/dev/null || true
-
-.PHONY: clean-all
-clean-all: clean docker-clean ## Clean everything including Docker
-
-# Health checks
-.PHONY: health
-health: ## Check health of all services
-	@echo "Checking API health..."
-	curl -f http://localhost:8080/health 2>/dev/null && echo "✅ API healthy" || echo "❌ API not responding"
-	@echo ""
-	@echo "Checking Frontend health..."
-	curl -f http://localhost:3000/api/health 2>/dev/null && echo "✅ Frontend healthy" || echo "❌ Frontend not responding"
-
-# CI/CD commands
-.PHONY: ci
-ci: lint test build ## Run CI pipeline
-
-.PHONY: release
-release: clean ci ## Prepare for release
-
-# Utility commands
-.PHONY: env-example
-env-example: ## Create .env file from example
-	@if [ ! -f .env ]; then \
-		cp .env.example .env 2>/dev/null || echo "No .env.example found at root"; \
-		echo ".env file created (if example existed)"; \
-	else \
-		echo ".env file already exists"; \
-	fi
-
-.PHONY: update
-update: ## Update all dependencies
-	$(PNPM) update
-
-# Help for specific targets
-.PHONY: help-dev
-help-dev: ## Show development-related commands
-	@echo "Development commands:"
-	@echo "  make dev             - Start all services"
-	@echo "  make dev-backend     - Start only API"
-	@echo "  make dev-frontend    - Start only frontend"
-	@echo "  make build           - Build all components"
-	@echo "  make test            - Run all tests"
-	@echo "  make lint            - Run linting"
-	@echo "  make setup           - Setup development environment"
-
-.PHONY: help-docker
-help-docker: ## Show Docker-related commands
-	@echo "Docker commands:"
-	@echo "  make docker-build           - Build all services with docker-compose"
-	@echo "  make docker-build-release   - Build release images with auto-detected versioning"
-	@echo "  make docker-build-tag       - Build release images for specific tag (TAG=v1.2.6-api)"
-	@echo "  make docker-push-release    - Push release images with auto-detected versioning"
-	@echo "  make docker-push-tag        - Push release images for specific tag (TAG=v1.2.6-api)"
-	@echo "  make docker-up              - Start all services"
-	@echo "  make docker-down            - Stop all services"
-	@echo "  make docker-dev             - Run development environment"
-	@echo "  make docker-logs            - Show container logs"
-	@echo "  make docker-clean           - Clean containers and volumes"
-
-.PHONY: help-api
-help-api: ## Show API-specific commands
-	@echo "API commands (prefix with 'api-'):"
-	@echo "  make api-build      - Build API"
-	@echo "  make api-test       - Test API"
-	@echo "  make api-dev        - Run API in dev mode"
-	@echo "  make api-check      - Check API code"
-	@echo "  make api-clippy     - Lint API code"
-	@echo "  make api-fmt        - Format API code"
-	@echo "  make api-doc        - Generate API docs"
-	@echo ""
-	@echo "For more API commands, run: make api-help"
+cloud-logs:
+	docker compose -f docker-compose.cloud.yml logs -f
